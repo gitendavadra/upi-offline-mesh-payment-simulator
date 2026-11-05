@@ -1,0 +1,138 @@
+:root {
+    --bg-navy: #080d1a;
+    --bg-dark-navy: #0b1222;
+    --bg-navy-card: #0f172a;
+    --bg-navy-accent: #1e293b;
+    --bg-navy-darker: #050811;
+    --border-navy: #1e293b;
+    --border-navy-light: #334155;
+    --teal-primary: #14b8a6;
+    --teal-hover: #0d9488;
+    --green-accent: #10b981;
+    --slate-text: #cbd5e1;
+    --slate-muted: #64748b;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-navy);
+    color: var(--slate-text);
+    min-height: 100vh;
+}
+
+.font-mono {
+    font-family: var(--font-mono);
+}
+
+.text-teal { color: var(--teal-primary) !important; }
+.text-green { color: var(--green-accent) !important; }
+.bg-navy { background-color: var(--bg-navy) !important; }
+.bg-dark-navy { background-color: var(--bg-dark-navy) !important; }
+.bg-navy-card { background-color: var(--bg-navy-card) !important; }
+.bg-navy-accent { background-color: var(--bg-navy-accent) !important; }
+.bg-navy-darker { background-color: var(--bg-navy-darker) !important; }
+.border-navy-subtle { border-color: var(--border-navy) !important; }
+
+.card-fintech {
+    background: var(--bg-navy-card);
+    border: 1px solid var(--border-navy);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.card-fintech:hover {
+    border-color: var(--border-navy-light);
+}
+
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: -0.02em;
+}
+
+.btn-teal {
+    background-color: var(--teal-primary);
+    color: #042f2e;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+}
+
+.btn-teal:hover {
+    background-color: var(--teal-hover);
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(20, 184, 166, 0.3);
+}
+
+.btn-outline-teal {
+    border: 1px solid var(--teal-primary);
+    color: var(--teal-primary);
+    background: transparent;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+}
+
+.btn-outline-teal:hover {
+    background-color: var(--teal-primary);
+    color: #042f2e;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.status-online { background-color: var(--green-accent); box-shadow: 0 0 8px var(--green-accent); }
+.status-offline { background-color: var(--slate-muted); }
+
+.badge-status-settled { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-status-rejected { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.badge-status-duplicate { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-status-pending { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+.badge-status-review { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+/* Table styling */
+.table-fintech {
+    color: var(--slate-text);
+}
+.table-fintech th {
+    background: var(--bg-dark-navy);
+    color: var(--slate-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-navy);
+    padding: 0.75rem 1rem;
+}
+.table-fintech td {
+    border-bottom: 1px solid var(--border-navy);
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+}
+.table-fintech tr:hover td {
+    background-color: rgba(30, 41, 59, 0.4);
+}
+
+/* Console log */
+.console-box {
+    background: #020617;
+    border: 1px solid var(--border-navy);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: #4ade80;
+    padding: 1rem;
+    max-height: 250px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}

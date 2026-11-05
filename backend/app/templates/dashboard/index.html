@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Top Metrics Row -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card-fintech">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-xs text-slate-400 text-uppercase fw-semibold">Simulated Balance</span>
+                <i class="fa-solid fa-wallet text-teal"></i>
+            </div>
+            <div class="metric-value text-green font-mono" id="stat-balance">₹5,000.00</div>
+            <div class="text-xs text-slate-400 mt-1">Authoritative Core Ledger Balance</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card-fintech">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-xs text-slate-400 text-uppercase fw-semibold">Settled Payments</span>
+                <i class="fa-solid fa-circle-check text-success"></i>
+            </div>
+            <div class="metric-value font-mono" id="stat-settled">0</div>
+            <div class="text-xs text-slate-400 mt-1">Settled on authoritative ledger</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card-fintech">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-xs text-slate-400 text-uppercase fw-semibold">Offline Queue</span>
+                <i class="fa-solid fa-clock text-warning"></i>
+            </div>
+            <div class="metric-value font-mono text-warning" id="stat-pending">0</div>
+            <div class="text-xs text-slate-400 mt-1">Durable offline pending packets</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card-fintech">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-xs text-slate-400 text-uppercase fw-semibold">Idempotency Cache</span>
+                <i class="fa-solid fa-shield-halved text-teal"></i>
+            </div>
+            <div class="metric-value font-mono" id="stat-cache-size">0</div>
+            <div class="text-xs text-slate-400 mt-1">SHA-256 unique claimed hashes</div>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Demo Flow Pipeline Card -->
+<div class="card-fintech mb-4 border-teal border-opacity-25">
+    <div class="d-flex align-items-center justify-content-between mb-3 border-bottom border-navy pb-3">
+        <div>
+            <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-play text-teal me-2"></i>Interactive Mesh Payment Pipeline</h5>
+            <small class="text-slate-400">Execute end-to-end simulated offline transactions step-by-step</small>
+        </div>
+        <button class="btn btn-sm btn-outline-danger" onclick="resetMesh()">
+            <i class="fa-solid fa-trash me-1"></i> Reset Mesh & Cache
+        </button>
+    </div>
+
+    <div class="row g-3 align-items-end">
+        <!-- Step 1 -->
+        <div class="col-lg-4">
+            <label class="form-label text-xs text-slate-300 fw-semibold">
+                <span class="badge bg-teal text-dark rounded-circle me-1">1</span> Compose Payment (Alice)
+            </label>
+            <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text bg-navy-accent border-navy text-slate-400">To</span>
+                <select class="form-select bg-navy-accent border-navy text-white font-mono" id="demo-receiver">
+                    <option value="bob@demo">bob@demo (Bob)</option>
+                    <option value="carol@demo">carol@demo (Carol)</option>
+                    <option value="dave@demo">dave@demo (Dave)</option>
+                </select>
+            </div>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-navy-accent border-navy text-slate-400">₹</span>
+                <input type="number" class="form-control bg-navy-accent border-navy text-white font-mono" id="demo-amount" value="500">
+                <span class="input-group-text bg-navy-accent border-navy text-slate-400">PIN</span>
+                <input type="password" class="form-control bg-navy-accent border-navy text-white font-mono" id="demo-pin" value="1234" maxlength="4" style="max-width: 70px;">
+                <button class="btn btn-teal" onclick="injectPayment()">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Inject
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="col-lg-4">
+            <label class="form-label text-xs text-slate-300 fw-semibold">
+                <span class="badge bg-teal text-dark rounded-circle me-1">2</span> Hop Device-to-Device
+            </label>
+            <p class="text-xs text-slate-400 mb-2">Simulate Bluetooth gossip broadcast across peers with TTL decrement.</p>
+            <button class="btn btn-sm btn-outline-teal w-100" onclick="runGossip()">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Run Gossip Round
+            </button>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="col-lg-4">
+            <label class="form-label text-xs text-slate-300 fw-semibold">
+                <span class="badge bg-teal text-dark rounded-circle me-1">3</span> Bridge Node Hits 4G
+            </label>
+            <p class="text-xs text-slate-400 mb-2">Uploads collected packets concurrently to exercise idempotency & settlement.</p>
+            <button class="btn btn-sm btn-teal w-100" onclick="flushBridges()">
+                <i class="fa-solid fa-tower-broadcast me-1"></i> Bridge Upload to Backend
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Split: Devices & Balances -->
+<div class="row g-4 mb-4">
+    <!-- Left: Simulated Mesh Devices -->
+    <div class="col-lg-6">
+        <div class="card-fintech h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-white mb-0"><i class="fa-solid fa-mobile-screen-button text-teal me-2"></i>Simulated Mesh Nodes</h6>
+                <span class="badge bg-navy-accent text-slate-400 font-mono text-xs">5 Virtual Devices</span>
+            </div>
+            <div id="mesh-devices-container">
+                <!-- Populated dynamically via app.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Authoritative Accounts -->
+    <div class="col-lg-6">
+        <div class="card-fintech h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-white mb-0"><i class="fa-solid fa-building-columns text-teal me-2"></i>Core Ledger Balances</h6>
+                <span class="badge bg-navy-accent text-slate-400 font-mono text-xs">ACID Storage</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-fintech table-sm mb-0" id="accounts-table">
+                    <thead>
+                        <tr>
+                            <th>VPA Address</th>
+                            <th>Account Holder</th>
+                            <th>Simulated Balance</th>
+                            <th>Version</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Ledger -->
+<div class="card-fintech mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold text-white mb-0"><i class="fa-solid fa-book text-teal me-2"></i>Authoritative Transaction Ledger</h6>
+        <a href="{{ url_for('transactions.history_page') }}" class="btn btn-sm btn-outline-teal text-xs">
+            View All Ledger Entries <i class="fa-solid fa-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-fintech table-sm" id="tx-table">
+            <thead>
+                <tr>
+                    <th>Tx ID</th>
+                    <th>Sender VPA</th>
+                    <th>Receiver VPA</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Bridge Gateway</th>
+                    <th>Hops</th>
+                    <th>Settled Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Live Activity Log -->
+<div class="card-fintech">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="fw-bold text-white mb-0"><i class="fa-solid fa-terminal text-teal me-2"></i>Live Cryptographic & Network Event Console</h6>
+        <span class="badge bg-navy-accent text-slate-400 font-mono text-xs">Real-Time Log</span>
+    </div>
+    <div class="console-box" id="activity-log">System initialized. Awaiting cryptographic packet injection...</div>
+</div>
+{% endblock %}

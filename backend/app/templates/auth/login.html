@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In — UPI Without Internet{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-5 col-lg-4">
+        <div class="card-fintech">
+            <div class="text-center mb-4">
+                <div class="brand-icon mb-2"><i class="fa-solid fa-satellite-dish text-teal fa-2x"></i></div>
+                <h4 class="fw-bold text-white">Sign In</h4>
+                <p class="text-xs text-slate-400">Authenticate with Argon2id credentials</p>
+            </div>
+
+            <form action="{{ url_for('auth.login') }}" method="POST">
+                <div class="mb-3">
+                    <label class="form-label text-xs text-slate-300 text-uppercase fw-semibold">Username or Email</label>
+                    <input type="text" name="username_or_email" class="form-control bg-navy-accent border-navy text-white font-mono" placeholder="e.g. alice" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-xs text-slate-300 text-uppercase fw-semibold">Password</label>
+                    <input type="password" name="password" class="form-control bg-navy-accent border-navy text-white font-mono" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-teal w-100 py-2">
+                    <i class="fa-solid fa-arrow-right-to-bracket me-1"></i> Sign In
+                </button>
+            </form>
+
+            <div class="text-center mt-3 text-xs text-slate-400">
+                Don't have an account? <a href="{{ url_for('auth.register') }}" class="text-teal">Register now</a>
+            </div>
+
+            <div class="p-3 bg-dark-navy rounded mt-4 text-xs font-mono text-slate-400">
+                <strong>Demo Credentials:</strong><br>
+                User: <span class="text-teal">alice</span> / <span class="text-teal">alice123</span><br>
+                Admin: <span class="text-teal">admin</span> / <span class="text-teal">admin123</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

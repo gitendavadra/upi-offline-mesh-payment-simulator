@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Double-Spending Conflict Demonstration — UPI Without Internet{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card-fintech mb-4">
+            <div class="border-bottom border-navy pb-3 mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="fw-bold text-white mb-1">
+                            <i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Academic Double-Spending Conflict Simulation
+                        </h4>
+                        <p class="text-xs text-slate-400 mb-0">Controlled experimental proof of offline double-spending risks, stale balance detection, and ledger reconciliation</p>
+                    </div>
+                    <button class="btn btn-warning fw-bold text-dark" onclick="runDoubleSpendSimulation()">
+                        <i class="fa-solid fa-play me-1"></i> Run Demonstration
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conceptual Architecture Explanation -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card-fintech bg-dark-navy p-3 h-100">
+                        <span class="badge bg-warning text-dark font-mono mb-2">The Fundamental Dilemma</span>
+                        <h6 class="text-white fw-bold">Offline Stale State</h6>
+                        <p class="text-xs text-slate-300 mb-0">
+                            When two phones are completely disconnected from the banking network, neither phone knows if the sender has spent funds elsewhere. Both see Alice's initial balance of ₹1,000.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-fintech bg-dark-navy p-3 h-100">
+                        <span class="badge bg-teal text-dark font-mono mb-2">Competing Demands</span>
+                        <h6 class="text-white fw-bold">₹800 + ₹700 = ₹1,500</h6>
+                        <p class="text-xs text-slate-300 mb-0">
+                            Device A signs a payment of ₹800 to Bob. Device B signs a payment of ₹700 to Carol. Combined total of ₹1,500 exceeds Alice's ₹1,000 balance!
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-fintech bg-dark-navy p-3 h-100">
+                        <span class="badge bg-success text-dark font-mono mb-2">Reconciliation Gate</span>
+                        <h6 class="text-white fw-bold">Ledger Defense</h6>
+                        <p class="text-xs text-slate-300 mb-0">
+                            When connectivity returns, the backend processes Tx A first. When Tx B arrives, it detects insufficient funds, flags `REQUIRES_REVIEW`, and stops overdraft.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Results Container -->
+            <div id="simulation-output" class="d-none">
+                <div class="card-fintech bg-dark-navy border-warning mb-4">
+                    <h6 class="fw-bold text-white mb-3"><i class="fa-solid fa-check-double text-warning me-2"></i>Live Simulation Execution Results</h6>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-navy-accent rounded border border-navy">
+                                <span class="badge bg-success font-mono mb-2">Device A Arrival (First Claimer)</span>
+                                <h6 class="text-white fw-bold mb-1">Tx A: Alice pays Bob ₹800.00</h6>
+                                <div class="font-mono text-xs text-success mb-2" id="txA-outcome">Outcome: SETTLED</div>
+                                <div class="text-xs text-slate-400">Alice has ₹1,000. Deducted ₹800. Balance becomes ₹200.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-navy-accent rounded border border-navy">
+                                <span class="badge bg-danger font-mono mb-2">Device B Arrival (Second Claimer)</span>
+                                <h6 class="text-white fw-bold mb-1">Tx B: Alice pays Carol ₹700.00</h6>
+                                <div class="font-mono text-xs text-danger mb-2" id="txB-outcome">Outcome: REJECTED</div>
+                                <div class="text-xs text-slate-400" id="txB-reason">Insufficient balance: Available ₹200, requested ₹700.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Balance Audit Comparison -->
+                    <div class="table-responsive">
+                        <table class="table table-fintech table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Participant</th>
+                                    <th>Initial Offline Balance</th>
+                                    <th>Final Ledger Balance</th>
+                                    <th>Net Delta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-mono text-teal">alice@demo</td>
+                                    <td class="font-mono" id="audit-alice-init">₹1,000.00</td>
+                                    <td class="font-mono text-green fw-bold" id="audit-alice-final">₹200.00</td>
+                                    <td class="font-mono text-danger">-₹800.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-mono text-teal">bob@demo</td>
+                                    <td class="font-mono" id="audit-bob-init">₹1,000.00</td>
+                                    <td class="font-mono text-green fw-bold" id="audit-bob-final">₹1,800.00</td>
+                                    <td class="font-mono text-success">+₹800.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-mono text-teal">carol@demo</td>
+                                    <td class="font-mono" id="audit-carol-init">₹2,500.00</td>
+                                    <td class="font-mono text-green fw-bold" id="audit-carol-final">₹2,500.00</td>
+                                    <td class="font-mono text-slate-400">₹0.00 (Protected from bad check)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Honest Academic Discussion & Viva Defense Notes -->
+            <div class="card-fintech bg-navy-darker">
+                <h6 class="fw-bold text-white mb-2"><i class="fa-solid fa-graduation-cap text-teal me-2"></i>Engineering Defense & Limitations Analysis</h6>
+                <div class="text-xs text-slate-400 lh-lg">
+                    <p class="mb-2">
+                        <strong>Why can't offline software prevent double-spending without internet?</strong><br>
+                        In a purely offline environment with independent peer-to-peer devices, no shared global state exists (CAP theorem). When Alice gives Bob a phone screen showing "₹800 signed," it is an <em>encrypted digital promise (promissory note)</em>, not instant settlement.
+                    </p>
+                    <p class="mb-0">
+                        <strong>How real-world systems address this:</strong><br>
+                        1. <strong>Pre-funded Hardware Wallets (UPI Lite / Secure Element):</strong> Real offline UPI stores money inside a tamper-resistant hardware chip (e.g. eSE or UICC). The chip decrements balance on-device and refuses to sign if offline funds are depleted.<br>
+                        2. <strong>Mesh-Routed Deferred Settlement:</strong> This academic architecture shows how asynchronous mesh hops deliver encrypted payloads to an authoritative gateway while enforcing strict idempotency and ledger consistency.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function runDoubleSpendSimulation() {
+    try {
+        const res = await fetch('/api/sync/double-spend-demo', { method: 'POST' });
+        const data = await res.json();
+
+        document.getElementById('simulation-output').classList.remove('d-none');
+        document.getElementById('txA-outcome').textContent = `Outcome: ${data.transactionA.outcome} (Settled in Core Ledger)`;
+        document.getElementById('txB-outcome').textContent = `Outcome: ${data.transactionB.outcome} (Prevented Overdraft)`;
+        document.getElementById('txB-reason').textContent = data.transactionB.reason || 'Insufficient available balance';
+
+        document.getElementById('audit-alice-init').textContent = `₹${data.initialState.aliceBalance.toFixed(2)}`;
+        document.getElementById('audit-alice-final').textContent = `₹${data.finalState.aliceBalance.toFixed(2)}`;
+
+        document.getElementById('audit-bob-init').textContent = `₹${data.initialState.bobBalance.toFixed(2)}`;
+        document.getElementById('audit-bob-final').textContent = `₹${data.finalState.bobBalance.toFixed(2)}`;
+
+        document.getElementById('audit-carol-init').textContent = `₹${data.initialState.carolBalance.toFixed(2)}`;
+        document.getElementById('audit-carol-final').textContent = `₹${data.finalState.carolBalance.toFixed(2)}`;
+
+        if (typeof refreshAll === 'function') refreshAll();
+    } catch (e) {
+        alert('Simulation failed: ' + e.message);
+    }
+}
+</script>
+{% endblock %}

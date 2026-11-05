@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}UPI Without Internet — Mesh Payment Simulator{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-navy">
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark-navy border-bottom border-navy-subtle sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('dashboard.index') }}">
+                <span class="brand-icon"><i class="fa-solid fa-satellite-dish text-teal"></i></span>
+                <span class="fw-bold tracking-tight text-white">UPI<span class="text-teal">Mesh</span></span>
+                <span class="badge bg-navy-accent text-teal ms-1 font-mono text-xs">OFFLINE-SIM</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 ms-3">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' or request.path == '/dashboard' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
+                            <i class="fa-solid fa-chart-pie me-1 text-teal"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/payments/send' in request.path %}active{% endif %}" href="{{ url_for('payments.send_page') }}">
+                            <i class="fa-solid fa-paper-plane me-1 text-teal"></i> Send Payment
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/transactions' in request.path %}active{% endif %}" href="{{ url_for('transactions.history_page') }}">
+                            <i class="fa-solid fa-receipt me-1 text-teal"></i> Ledger
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/network/simulator' in request.path %}active{% endif %}" href="{{ url_for('network.simulator_page') }}">
+                            <i class="fa-solid fa-circle-nodes me-1 text-teal"></i> Mesh Network
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/queue/offline' in request.path %}active{% endif %}" href="{{ url_for('sync.queue_page') }}">
+                            <i class="fa-solid fa-boxes-packing me-1 text-teal"></i> Offline Queue
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/conflicts/double-spend' in request.path %}active{% endif %}" href="{{ url_for('sync.double_spend_page') }}">
+                            <i class="fa-solid fa-shield-halved me-1 text-warning"></i> Double-Spend Demo
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/admin' in request.path %}active{% endif %}" href="{{ url_for('admin.admin_page') }}">
+                            <i class="fa-solid fa-lock me-1 text-teal"></i> Admin
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="user-pill d-flex align-items-center gap-2 px-3 py-1 bg-navy-accent rounded-pill border border-navy-subtle">
+                        <span class="status-dot status-online"></span>
+                        <span class="font-mono text-sm text-slate-300" id="nav-user-vpa">alice@demo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Academic Simulation Notice Banner -->
+    <div class="alert-simulation py-2 px-4 bg-navy-darker border-bottom border-navy-subtle text-center text-slate-400 text-xs">
+        <i class="fa-solid fa-circle-info text-teal me-1"></i>
+        <strong>Academic Research Simulation:</strong> Demonstrating offline mesh cryptographic payment routing, hybrid RSA-OAEP + AES-256-GCM encryption, idempotency deduplication, and atomic settlement. No real monetary transactions are performed.
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="container-fluid px-4 py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap 5 Bundle JS & Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

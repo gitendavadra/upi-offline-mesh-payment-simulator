@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Ledger — UPI Without Internet{% endblock %}
+
+{% block content %}
+<div class="card-fintech mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom border-navy pb-3 mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-1"><i class="fa-solid fa-receipt text-teal me-2"></i>Cryptographic Transaction Ledger</h4>
+            <p class="text-xs text-slate-400 mb-0">Immutable records of settled, rejected, and deduplicated mesh payment attempts</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-teal" onclick="loadLedger()">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh Ledger
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter & Search Controls -->
+    <div class="row g-2 mb-4">
+        <div class="col-md-6">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-navy-accent border-navy text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
+                <input type="text" class="form-control bg-navy-accent border-navy text-white font-mono" id="tx-search" placeholder="Search by VPA, packet hash, or bridge node..." oninput="debounceSearch()">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select form-select-sm bg-navy-accent border-navy text-white" id="tx-filter-status" onchange="loadLedger()">
+                <option value="">All Statuses</option>
+                <option value="SETTLED">SETTLED (Completed)</option>
+                <option value="REJECTED">REJECTED (Insufficient Funds)</option>
+                <option value="DUPLICATE_DROPPED">DUPLICATE_DROPPED</option>
+                <option value="REQUIRES_REVIEW">REQUIRES_REVIEW (Conflict)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="table-responsive">
+        <table class="table table-fintech table-hover align-middle" id="ledger-table">
+            <thead>
+                <tr>
+                    <th>Tx ID</th>
+                    <th>SHA-256 Packet Hash (Idempotency Key)</th>
+                    <th>Sender</th>
+                    <th>Receiver</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Signature</th>
+                    <th>Bridge Gateway</th>
+                    <th>Hops</th>
+                    <th>Settled</th>
+                    <th class="text-end">Offline QR</th>
+                </tr>
+            </thead>
+            <tbody id="ledger-tbody">
+                <tr><td colspan="11" class="text-center text-slate-400 py-4">Loading ledger transactions...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Offline QR Code Modal -->
+<div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-navy-card border border-navy text-white">
+            <div class="modal-header border-navy">
+                <h5 class="modal-title fs-6 fw-bold text-white" id="qrModalLabel">
+                    <i class="fa-solid fa-qrcode text-teal me-2"></i>Offline Payment QR Code
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="btn-group w-100 mb-3" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-teal active" id="btn-qr-upi" onclick="switchQrFormat('upi')">UPI Intent URI</button>
+                    <button type="button" class="btn btn-sm btn-outline-teal" id="btn-qr-mesh" onclick="switchQrFormat('mesh')">Mesh Cryptographic Proof</button>
+                </div>
+
+                <div class="d-flex justify-content-center my-3 p-3 bg-white rounded-3 mx-auto" style="width: 240px; height: 240px;">
+                    <div id="qrcode-canvas" class="d-flex align-items-center justify-content-center"></div>
+                </div>
+
+                <div class="fw-bold font-mono text-teal mt-2" id="qr-modal-amount">₹0.00</div>
+                <div class="text-xs text-slate-400 mb-3" id="qr-modal-parties">Alice → Bob</div>
+
+                <div class="text-start">
+                    <label class="form-label text-xs text-slate-400 fw-semibold mb-1">Encoded Offline Payload</label>
+                    <pre class="bg-navy-accent border border-navy p-2 rounded text-xs font-mono text-teal overflow-auto text-break mb-0" id="qr-payload-preview" style="max-height: 90px;"></pre>
+                </div>
+            </div>
+            <div class="modal-footer border-navy">
+                <button type="button" class="btn btn-sm btn-outline-light" onclick="copyQrPayload()">
+                    <i class="fa-solid fa-copy me-1"></i> Copy Payload
+                </button>
+                <button type="button" class="btn btn-sm btn-teal" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+let searchTimeout;
+let currentQrTx = null;
+let currentQrMode = 'upi';
+let qrcodeInstance = null;
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(loadLedger, 300);
+}
+
+function showTxQr(txDataStr) {
+    try {
+        currentQrTx = JSON.parse(decodeURIComponent(txDataStr));
+        currentQrMode = 'upi';
+        renderCurrentQr();
+        const modal = new bootstrap.Modal(document.getElementById('qrModal'));
+        modal.show();
+    } catch (e) {
+        alert('Could not render QR: ' + e.message);
+    }
+}
+
+function switchQrFormat(mode) {
+    currentQrMode = mode;
+    document.getElementById('btn-qr-upi').classList.toggle('active', mode === 'upi');
+    document.getElementById('btn-qr-mesh').classList.toggle('active', mode === 'mesh');
+    renderCurrentQr();
+}
+
+function renderCurrentQr() {
+    if (!currentQrTx) return;
+
+    let payload = '';
+    if (currentQrMode === 'upi') {
+        const pa = currentQrTx.receiverVpa || '';
+        const pn = pa.split('@')[0] || 'Merchant';
+        const am = parseFloat(currentQrTx.amount || 0).toFixed(2);
+        const tr = currentQrTx.id || '';
+        const tn = 'OfflineMesh_' + (currentQrTx.packetHash ? currentQrTx.packetHash.substring(0, 8) : 'tx');
+        payload = `upi://pay?pa=${encodeURIComponent(pa)}&pn=${encodeURIComponent(pn)}&am=${am}&tr=${tr}&tn=${encodeURIComponent(tn)}&cu=INR`;
+    } else {
+        payload = JSON.stringify({
+            scheme: 'UPI-OFFLINE-MESH-V1',
+            txId: currentQrTx.id,
+            from: currentQrTx.senderVpa,
+            to: currentQrTx.receiverVpa,
+            amount: parseFloat(currentQrTx.amount),
+            currency: 'INR',
+            packetHash: currentQrTx.packetHash,
+            status: currentQrTx.status,
+            relayed: currentQrTx.hopCount > 0,
+            hops: currentQrTx.hopCount,
+            settledAt: currentQrTx.settledAt,
+        }, null, 2);
+    }
+
+    document.getElementById('qr-modal-amount').textContent = '₹' + parseFloat(currentQrTx.amount).toFixed(2);
+    document.getElementById('qr-modal-parties').textContent = `${currentQrTx.senderVpa} → ${currentQrTx.receiverVpa} (#${currentQrTx.id})`;
+    document.getElementById('qr-payload-preview').textContent = payload;
+
+    const container = document.getElementById('qrcode-canvas');
+    container.innerHTML = '';
+    qrcodeInstance = new QRCode(container, {
+        text: payload,
+        width: 200,
+        height: 200,
+        colorDark: '#041d24',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+    });
+}
+
+function copyQrPayload() {
+    const text = document.getElementById('qr-payload-preview').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('QR Payload copied to clipboard!');
+    });
+}
+
+async function loadLedger() {
+    const search = document.getElementById('tx-search').value;
+    const status = document.getElementById('tx-filter-status').value;
+    const tbody = document.getElementById('ledger-tbody');
+
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status) params.append('status', status);
+
+    try {
+        const res = await fetch(`/api/transactions?${params.toString()}`);
+        const data = await res.json();
+
+        if (data.transactions.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center text-slate-400 py-4">No matching transactions found in ledger.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.transactions.map(t => {
+            const badgeClass =
+                t.status === 'SETTLED' ? 'badge-status-settled' :
+                t.status === 'REJECTED' ? 'badge-status-rejected' :
+                t.status === 'DUPLICATE_DROPPED' ? 'badge-status-duplicate' : 'badge-status-review';
+
+            const encodedTx = encodeURIComponent(JSON.stringify(t));
+
+            return `
+                <tr>
+                    <td class="font-mono text-xs fw-bold">#${t.id}</td>
+                    <td class="font-mono text-xs text-teal" title="${t.packetHash}">
+                        ${t.packetHash ? t.packetHash.substring(0, 16) + '...' : '-'}
+                    </td>
+                    <td class="font-mono text-xs">${t.senderVpa}</td>
+                    <td class="font-mono text-xs">${t.receiverVpa}</td>
+                    <td class="font-mono fw-bold text-white">₹${parseFloat(t.amount).toFixed(2)}</td>
+                    <td><span class="badge ${badgeClass}">${t.status}</span></td>
+                    <td class="text-xs">
+                        ${t.signatureValid ?
+                            `<span class="text-success"><i class="fa-solid fa-circle-check"></i> Valid</span>` :
+                            `<span class="text-slate-500">Unsigned</span>`}
+                    </td>
+                    <td class="font-mono text-xs text-slate-300">${t.bridgeNodeId}</td>
+                    <td class="text-center font-mono">${t.hopCount}</td>
+                    <td class="text-xs text-slate-400 font-mono">${t.settledAt ? new Date(t.settledAt).toLocaleString() : '-'}</td>
+                    <td class="text-end">
+                        <button class="btn btn-xs btn-outline-teal px-2 py-1" onclick="showTxQr('${encodedTx}')" title="Show Offline QR">
+                            <i class="fa-solid fa-qrcode me-1"></i> QR
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4">Failed to load ledger: ${e.message}</td></tr>`;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadLedger);
+</script>
+{% endblock %}

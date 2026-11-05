@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Send Payment — UPI Without Internet{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card-fintech">
+            <div class="border-bottom border-navy pb-3 mb-4">
+                <h4 class="fw-bold text-white mb-1"><i class="fa-solid fa-paper-plane text-teal me-2"></i>Initiate Payment</h4>
+                <p class="text-xs text-slate-400 mb-0">Create hybrid encrypted payment packet with client-side RSA digital signature</p>
+            </div>
+
+            <form id="payment-form" onsubmit="handleSendSubmit(event)">
+                <!-- Sender Selection -->
+                <div class="mb-3">
+                    <label class="form-label text-xs text-slate-300 text-uppercase fw-semibold">Sender Account (VPA)</label>
+                    <select class="form-select bg-navy-accent border-navy text-white font-mono" id="send-sender" required>
+                        <option value="alice@demo" selected>alice@demo — Alice Sharma (₹5,000.00)</option>
+                        <option value="bob@demo">bob@demo — Bob Verma (₹1,000.00)</option>
+                        <option value="carol@demo">carol@demo — Carol Sen (₹2,500.00)</option>
+                        <option value="dave@demo">dave@demo — Dave Nair (₹500.00)</option>
+                    </select>
+                </div>
+
+                <!-- Recipient Selection -->
+                <div class="mb-3">
+                    <label class="form-label text-xs text-slate-300 text-uppercase fw-semibold">Recipient VPA</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-navy-accent border-navy text-slate-400"><i class="fa-solid fa-at"></i></span>
+                        <input type="text" class="form-control bg-navy-accent border-navy text-white font-mono" id="send-receiver" value="bob@demo" placeholder="e.g. user@demo" required>
+                    </div>
+                </div>
+
+                <!-- Amount & PIN -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-7">
+                        <label class="form-label text-xs text-slate-300 text-uppercase fw-semibold">Amount (INR)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-navy-accent border-navy text-teal fw-bold">₹</span>
+                            <input type="number" step="0.01" class="form-control bg-navy-accent border-navy text-white font-mono fs-5" id="send-amount" value="350.00" required>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label text-xs text-slate-300 text-uppercase fw-semibold">UPI PIN</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-navy-accent border-navy text-slate-400"><i class="fa-solid fa-key"></i></span>
+                            <input type="password" maxlength="6" class="form-control bg-navy-accent border-navy text-white font-mono fs-5" id="send-pin" value="1234" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode Selection: Online Direct vs Offline Mesh Queue -->
+                <div class="mb-4">
+                    <label class="form-label text-xs text-slate-300 text-uppercase fw-semibold mb-2">Transmission Routing Mode</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="routing-mode" id="mode-offline" value="offline" checked>
+                            <label class="btn btn-outline-teal w-100 p-3 text-start" for="mode-offline">
+                                <div class="fw-bold mb-1"><i class="fa-solid fa-boxes-packing text-teal me-1"></i> Offline Mesh Queue</div>
+                                <div class="text-xs text-slate-400">Queue locally in durable storage with state machine for mesh gossip.</div>
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="routing-mode" id="mode-online" value="online">
+                            <label class="btn btn-outline-teal w-100 p-3 text-start" for="mode-online">
+                                <div class="fw-bold mb-1"><i class="fa-solid fa-bolt text-teal me-1"></i> Direct Gateway</div>
+                                <div class="text-xs text-slate-400">Simulate instant online delivery directly to core bank gateway.</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-teal w-100 py-2 fs-6">
+                    <i class="fa-solid fa-lock me-1"></i> Encrypt, Sign & Execute Payment
+                </button>
+            </form>
+
+            <!-- Result Box -->
+            <div id="payment-result" class="mt-4 d-none">
+                <div class="card-fintech bg-dark-navy p-3 border-teal">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <strong class="text-white" id="result-title">Payment Result</strong>
+                        <span class="badge bg-teal text-dark font-mono" id="result-badge">STATUS</span>
+                    </div>
+                    <pre class="font-mono text-xs text-slate-300 mb-0" id="result-body"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function handleSendSubmit(e) {
+    e.preventDefault();
+    const senderVpa = document.getElementById('send-sender').value;
+    const receiverVpa = document.getElementById('send-receiver').value;
+    const amount = document.getElementById('send-amount').value;
+    const pin = document.getElementById('send-pin').value;
+    const isOffline = document.getElementById('mode-offline').checked;
+
+    const resultBox = document.getElementById('payment-result');
+    const resultTitle = document.getElementById('result-title');
+    const resultBadge = document.getElementById('result-badge');
+    const resultBody = document.getElementById('result-body');
+
+    try {
+        const res = await fetch('/api/payments/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ senderVpa, receiverVpa, amount, pin, offline: isOffline })
+        });
+        const data = await res.json();
+        resultBox.classList.remove('d-none');
+
+        if (res.ok) {
+            resultTitle.textContent = isOffline ? 'Offline Payment Queued' : 'Payment Settled Direct';
+            resultBadge.textContent = data.mode || data.outcome;
+            resultBadge.className = 'badge bg-success font-mono';
+            resultBody.textContent = JSON.stringify(data, null, 2);
+        } else {
+            resultTitle.textContent = 'Payment Error';
+            resultBadge.textContent = 'FAILED';
+            resultBadge.className = 'badge bg-danger font-mono';
+            resultBody.textContent = data.error || 'Unknown error occurred.';
+        }
+    } catch (err) {
+        resultBox.classList.remove('d-none');
+        resultTitle.textContent = 'Network Error';
+        resultBadge.textContent = 'ERROR';
+        resultBadge.className = 'badge bg-danger font-mono';
+        resultBody.textContent = err.message;
+    }
+}
+</script>
+{% endblock %}

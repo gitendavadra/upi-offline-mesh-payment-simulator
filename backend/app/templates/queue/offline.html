@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Durable Offline Queue — UPI Without Internet{% endblock %}
+
+{% block content %}
+<div class="card-fintech mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom border-navy pb-3 mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-1"><i class="fa-solid fa-boxes-packing text-teal me-2"></i>Durable Offline Transaction Queue</h4>
+            <p class="text-xs text-slate-400 mb-0">Persistent storage of encrypted payment packets on device storage awaiting peer mesh routing or bridge connectivity</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-teal" onclick="triggerSync()">
+                <i class="fa-solid fa-rotate me-1"></i> Trigger Queue Sync
+            </button>
+            <button class="btn btn-sm btn-outline-teal" onclick="loadQueue()">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card-fintech p-3 bg-dark-navy">
+                <span class="text-xs text-slate-400 text-uppercase fw-semibold">State Machine Lifecycle</span>
+                <p class="text-xs text-slate-300 mt-2 mb-0 font-mono">
+                    CREATED ➔ PENDING_OFFLINE ➔ READY_TO_SYNC ➔ SYNCING ➔ COMPLETED_SIMULATION
+                </p>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card-fintech p-3 bg-dark-navy">
+                <span class="text-xs text-slate-400 text-uppercase fw-semibold">Integrity Guarantees</span>
+                <p class="text-xs text-slate-300 mt-2 mb-0">
+                    Encrypted with RSA-OAEP + AES-GCM and nonces. Queued requests cannot be silently tampered with on client storage without invalidating cryptographic auth tags.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Table -->
+    <div class="table-responsive">
+        <table class="table table-fintech align-middle" id="queue-table">
+            <thead>
+                <tr>
+                    <th>Queue ID</th>
+                    <th>Packet ID</th>
+                    <th>Sender VPA</th>
+                    <th>Receiver VPA</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Retry Attempts</th>
+                    <th>Signed At</th>
+                    <th>Last Sync Attempt</th>
+                </tr>
+            </thead>
+            <tbody id="queue-tbody">
+                <tr><td colspan="9" class="text-center text-slate-400 py-4">Loading offline queue items...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function loadQueue() {
+    const tbody = document.getElementById('queue-tbody');
+    try {
+        const res = await fetch('/api/sync/queue');
+        const data = await res.json();
+
+        if (data.items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-slate-400 py-4">Offline queue is empty. Use "Send Payment" in offline mode to enqueue transactions.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.items.map(item => {
+            const badgeClass =
+                item.status === 'COMPLETED_SIMULATION' ? 'badge-status-settled' :
+                item.status === 'REQUIRES_REVIEW' ? 'badge-status-review' :
+                item.status === 'FAILED' ? 'badge-status-rejected' : 'badge-status-pending';
+
+            return `
+                <tr>
+                    <td class="font-mono text-xs fw-bold">#${item.id}</td>
+                    <td class="font-mono text-xs text-teal">${item.packetId.substring(0, 8)}...</td>
+                    <td class="font-mono text-xs">${item.senderVpa}</td>
+                    <td class="font-mono text-xs">${item.receiverVpa}</td>
+                    <td class="font-mono fw-bold text-white">₹${parseFloat(item.amount).toFixed(2)}</td>
+                    <td><span class="badge ${badgeClass}">${item.status}</span></td>
+                    <td class="text-center font-mono">${item.attempts}</td>
+                    <td class="text-xs text-slate-400 font-mono">${new Date(item.signedAt).toLocaleTimeString()}</td>
+                    <td class="text-xs text-slate-400 font-mono">${item.lastAttemptAt ? new Date(item.lastAttemptAt).toLocaleTimeString() : '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Error loading queue: ${e.message}</td></tr>`;
+    }
+}
+
+async function triggerSync() {
+    try {
+        const res = await fetch('/api/sync/run', { method: 'POST' });
+        const data = await res.json();
+        alert(`Queue Sync Complete!\nTotal Processed: ${data.totalProcessed}\nSettled: ${data.syncedCount}\nReview: ${data.reviewCount}\nFailed: ${data.failedCount}`);
+        loadQueue();
+    } catch (e) {
+        alert('Sync failed: ' + e.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadQueue);
+</script>
+{% endblock %}

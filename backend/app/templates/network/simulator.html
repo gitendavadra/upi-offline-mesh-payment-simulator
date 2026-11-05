@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Mesh Network Simulator — UPI Without Internet{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Visual Topology Canvas -->
+    <div class="col-lg-8">
+        <div class="card-fintech">
+            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-navy pb-3">
+                <div>
+                    <h5 class="fw-bold text-white mb-1"><i class="fa-solid fa-circle-nodes text-teal me-2"></i>Multi-Hop Mesh Network Topology</h5>
+                    <p class="text-xs text-slate-400 mb-0">Device-to-device gossip routing simulation without cellular or internet connectivity</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-teal" onclick="runGossipRound()">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Gossip Round
+                    </button>
+                    <button class="btn btn-sm btn-teal" onclick="flushBridgeNodes()">
+                        <i class="fa-solid fa-tower-broadcast me-1"></i> Flush Bridges
+                    </button>
+                </div>
+            </div>
+
+            <!-- SVG Visualizer Canvas -->
+            <div class="position-relative bg-navy-darker rounded border border-navy p-2" style="height: 380px;">
+                <svg id="mesh-svg" width="100%" height="100%" viewBox="0 0 850 320">
+                    <!-- Connections -->
+                    <line x1="120" y1="160" x2="260" y2="80" stroke="#334155" stroke-width="2" stroke-dasharray="4" />
+                    <line x1="260" y1="80" x2="420" y2="160" stroke="#334155" stroke-width="2" stroke-dasharray="4" />
+                    <line x1="420" y1="160" x2="580" y2="80" stroke="#334155" stroke-width="2" stroke-dasharray="4" />
+                    <line x1="580" y1="80" x2="720" y2="160" stroke="#334155" stroke-width="2" stroke-dasharray="4" />
+                    <line x1="260" y1="80" x2="580" y2="80" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="2" />
+
+                    <!-- Nodes rendered dynamically in script -->
+                    <g id="svg-nodes"></g>
+                </svg>
+            </div>
+
+            <!-- Network Metrics Footer -->
+            <div class="row g-2 mt-3 text-center">
+                <div class="col-3">
+                    <div class="card-fintech p-2 bg-dark-navy">
+                        <span class="text-xs text-slate-400">Total Mesh Nodes</span>
+                        <div class="fw-bold text-white font-mono" id="node-count">5</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="card-fintech p-2 bg-dark-navy">
+                        <span class="text-xs text-slate-400">Gateways (4G)</span>
+                        <div class="fw-bold text-success font-mono">1</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="card-fintech p-2 bg-dark-navy">
+                        <span class="text-xs text-slate-400">Max Hop TTL</span>
+                        <div class="fw-bold text-teal font-mono">5 Hops</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="card-fintech p-2 bg-dark-navy">
+                        <span class="text-xs text-slate-400">Packet Loss Rate</span>
+                        <div class="fw-bold text-warning font-mono" id="loss-display">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Controls & Node Status -->
+    <div class="col-lg-4">
+        <div class="card-fintech mb-3">
+            <h6 class="fw-bold text-white mb-3"><i class="fa-solid fa-sliders text-teal me-2"></i>Network Simulator Controls</h6>
+
+            <div class="mb-3">
+                <label class="form-label text-xs text-slate-300">Packet Loss Rate Simulation</label>
+                <input type="range" class="form-range" id="loss-slider" min="0" max="0.5" step="0.05" value="0" onchange="updateLossRate(this.value)">
+                <div class="d-flex justify-content-between text-xs text-slate-400">
+                    <span>0% (Ideal BLE)</span>
+                    <span>25%</span>
+                    <span>50% (High Interference)</span>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button class="btn btn-sm btn-outline-danger" onclick="resetNetwork()">
+                    <i class="fa-solid fa-trash me-1"></i> Clear Packets & Reset
+                </button>
+            </div>
+        </div>
+
+        <div class="card-fintech">
+            <h6 class="fw-bold text-white mb-2"><i class="fa-solid fa-list-check text-teal me-2"></i>Device Buffer Status</h6>
+            <div id="device-buffer-list">
+                <!-- Populated via script -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadTopology() {
+    try {
+        const res = await fetch('/api/mesh/topology');
+        const data = await res.json();
+        renderSvgNodes(data.nodes);
+        renderBufferList(data.nodes);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function renderSvgNodes(nodes) {
+    const g = document.getElementById('svg-nodes');
+    if (!g) return;
+    g.innerHTML = nodes.map(n => {
+        const color = n.hasInternet ? '#10b981' : '#14b8a6';
+        const isBridge = n.hasInternet;
+        return `
+            <g transform="translate(${n.x}, ${n.y})">
+                <circle r="26" fill="#0f172a" stroke="${color}" stroke-width="${isBridge ? '3' : '2'}" />
+                <circle r="16" fill="${color}" opacity="0.2" />
+                <text text-anchor="middle" dy="5" fill="#ffffff" font-size="12" font-family="monospace" font-weight="bold">
+                    ${n.packetCount}
+                </text>
+                <text text-anchor="middle" dy="42" fill="#cbd5e1" font-size="11" font-weight="600">
+                    ${n.id}
+                </text>
+                <text text-anchor="middle" dy="56" fill="${isBridge ? '#34d399' : '#64748b'}" font-size="9" font-weight="bold">
+                    ${isBridge ? '🌐 4G BRIDGE' : '🚫 OFFLINE'}
+                </text>
+            </g>
+        `;
+    }).join('');
+}
+
+function renderBufferList(nodes) {
+    const container = document.getElementById('device-buffer-list');
+    if (!container) return;
+    container.innerHTML = nodes.map(n => `
+        <div class="p-2 border-bottom border-navy text-xs d-flex justify-content-between align-items-center">
+            <div>
+                <strong class="text-white">${n.id}</strong>
+                <span class="badge ${n.hasInternet ? 'bg-success' : 'bg-secondary'} ms-1">${n.hasInternet ? 'Gateway' : 'Peer'}</span>
+            </div>
+            <span class="font-mono text-teal">${n.packetCount} pkt</span>
+        </div>
+    `).join('');
+}
+
+async function runGossipRound() {
+    await fetch('/api/mesh/gossip', { method: 'POST' });
+    loadTopology();
+}
+
+async function flushBridgeNodes() {
+    await fetch('/api/mesh/flush', { method: 'POST' });
+    loadTopology();
+}
+
+async function resetNetwork() {
+    await fetch('/api/mesh/reset', { method: 'POST' });
+    loadTopology();
+}
+
+async function updateLossRate(val) {
+    document.getElementById('loss-display').textContent = `${Math.round(val * 100)}%`;
+    await fetch('/api/mesh/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ packetLossRate: parseFloat(val) })
+    });
+}
+
+document.addEventListener('DOMContentLoaded', loadTopology);
+</script>
+{% endblock %}

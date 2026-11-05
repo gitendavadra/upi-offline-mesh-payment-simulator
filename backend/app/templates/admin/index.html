@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Console — UPI Without Internet{% endblock %}
+
+{% block content %}
+<div class="card-fintech mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom border-navy pb-3 mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-1"><i class="fa-solid fa-lock text-teal me-2"></i>Bank & System Administration</h4>
+            <p class="text-xs text-slate-400 mb-0">System health monitoring, role management, and security audit log auditing</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-danger" onclick="resetSystemToBaseline()">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Factory Reset System State
+            </button>
+            <button class="btn btn-sm btn-outline-teal" onclick="loadAdminData()">
+                <i class="fa-solid fa-rotate me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Accounts & Users Grid -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card-fintech bg-dark-navy p-3 h-100">
+                <h6 class="fw-bold text-white mb-3"><i class="fa-solid fa-users text-teal me-2"></i>Registered System Users</h6>
+                <div class="table-responsive">
+                    <table class="table table-fintech table-sm" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Assigned VPA</th>
+                                <th>Role</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <!-- Populated via script -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card-fintech bg-dark-navy p-3 h-100">
+                <h6 class="fw-bold text-white mb-3"><i class="fa-solid fa-key text-teal me-2"></i>Server Cryptographic Keypair Status</h6>
+                <div class="p-3 bg-navy-accent rounded text-xs font-mono">
+                    <div class="text-slate-400 mb-1">Active Algorithm: <span class="text-teal">RSA-2048 / OAEP-SHA256</span></div>
+                    <div class="text-slate-400 mb-1">Symmetric Scheme: <span class="text-teal">AES-256-GCM Ephemeral</span></div>
+                    <div class="text-slate-400 mb-2">Signature Scheme: <span class="text-teal">RSA-PSS with SHA-256</span></div>
+                    <div class="text-slate-500 text-xs">Public key distribution available via <code class="text-teal">GET /api/server-key</code> for offline sender caching.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Audit Logs -->
+    <div class="card-fintech bg-dark-navy p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-white mb-0"><i class="fa-solid fa-shield-halved text-teal me-2"></i>Security & Compliance Audit Trail</h6>
+            <span class="badge bg-navy-accent text-slate-400 font-mono text-xs">Immutable Event Log</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-fintech table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Event Type</th>
+                        <th>Actor</th>
+                        <th>Severity</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-tbody">
+                    <!-- Populated via script -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadAdminData() {
+    try {
+        // Users
+        const uRes = await fetch('/api/admin/users');
+        const users = await uRes.json();
+        document.getElementById('users-tbody').innerHTML = users.map(u => `
+            <tr>
+                <td class="font-mono text-teal">${u.username}</td>
+                <td>${u.full_name}</td>
+                <td class="font-mono text-xs">${u.vpa}</td>
+                <td><span class="badge ${u.role === 'ADMIN' ? 'bg-danger' : 'bg-primary'} font-mono">${u.role}</span></td>
+            </tr>
+        `).join('');
+
+        // Audit Logs
+        const lRes = await fetch('/api/admin/audit-logs');
+        const logs = await lRes.json();
+        document.getElementById('audit-tbody').innerHTML = logs.map(l => {
+            const badgeClass =
+                l.severity === 'CRITICAL' ? 'bg-danger' :
+                l.severity === 'WARNING' ? 'bg-warning text-dark' : 'bg-secondary';
+            return `
+                <tr>
+                    <td class="font-mono text-xs text-slate-400">${new Date(l.timestamp).toLocaleTimeString()}</td>
+                    <td class="font-mono text-xs fw-bold text-teal">${l.eventType}</td>
+                    <td class="font-mono text-xs">${l.actor}</td>
+                    <td><span class="badge ${badgeClass} font-mono">${l.severity}</span></td>
+                    <td class="text-xs text-slate-300 font-mono">${l.details || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error("Admin load error:", e);
+    }
+}
+
+async function resetSystemToBaseline() {
+    if (!confirm("Are you sure you want to reset all account balances to defaults and clear transactions?")) return;
+    try {
+        const res = await fetch('/api/admin/reset-system', { method: 'POST' });
+        const data = await res.json();
+        alert(data.status);
+        loadAdminData();
+    } catch (e) {
+        alert("Reset failed: " + e.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadAdminData);
+</script>
+{% endblock %}

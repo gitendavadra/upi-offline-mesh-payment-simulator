@@ -1,0 +1,6 @@
+{
+  "name": "UPI Offline Mesh Payment Simulator",
+  "description": "Academic fintech simulation demonstrating offline mesh payments, hybrid RSA-OAEP + AES-256-GCM encryption, idempotency deduplication, and ledger reconciliation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
